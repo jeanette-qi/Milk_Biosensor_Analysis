@@ -20,7 +20,11 @@
 5. Update port based on the Arduino port
 6. Update baud rate based on the Arduino baud rate
 
-Setup Calibration (TBD)...
+**Setup Calibration**
+1. Upload 'milk_impedance_sensor.ino' to the Arduino via the Arduino IDE.
+2. Insert calibration impedance between J3 and J4 (usually a known resistor close to the unknown impedance, see PmodIA schematic)
+3. Close Arduino Serial Monitor before running 'read_serial_data.py' to start calibration.
+4. Run 'read_serial_data.py', follow serial printout.
 
 
 
