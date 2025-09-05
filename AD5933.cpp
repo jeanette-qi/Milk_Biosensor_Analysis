@@ -595,6 +595,7 @@
  }
  */
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 =======
 bool AD5933::calibrate(double gain[], int phase[], int ref, int n) {
@@ -670,3 +671,6 @@ bool AD5933::calibrate(double gain[], int phase[], int real[], int imag[],
     return true;
 }
 >>>>>>> origin/main
+=======
+ 
+>>>>>>> cb5f9a1 (WIP: local edits before rebase)
