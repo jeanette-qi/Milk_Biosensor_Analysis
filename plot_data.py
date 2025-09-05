@@ -1,78 +1,69 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
 
-def plot():
-    
-    
-    #df = pd.read_excel('bioimpedance.xlsx', header=0)
-    #freq_50_data = df[df['c_frequency'] == 50]
-    #print(df.head(5))
-    #print(freq_50_data['impedance'])
-
-    user_input = input("Enter the name or description to include in the plot title (e.g., 'Milk Sensor'): ")
-
-    
-    # Add Google Drive directory path
-    google_drive_path = '/Users/jeanetteqi/Library/CloudStorage/GoogleDrive-jeanette.qi@sjsu.edu/Shared drives/MS project_Bryant and Sejad_Human Milk for Premature Infants/Prototype_MilkSensor_CSVData'
-    
+def load_latest_data(directory):
+    """
+    Loads the most recent CSV file from the directory.
+    """
     try:
-        #Check if path exists
-        if not os.path.exists(google_drive_path):
-            print(f'No Excel files found in the specified {google_drive_path}')
-            return
-       
-        #List all Excel files in folder
-        file_registry = [file for file in os.listdir(google_drive_path) if file.endswith('.xlsx')]
-        
-        #If no Excel files
-        if not file_registry:
-            print("No Excel files found in the specified folder.")
-            return
-       
-        # Find the most recently modified Excel file
-        recent_file = max(
-            [os.path.join(google_drive_path, file) for file in file_registry],
-            key=os.path.getctime
-        )
-        print(f"Loading data from: {recent_file}")
-        
-        # Load the data from the most recent file
-        df = pd.read_excel(recent_file, header=0)
+        files = [f for f in os.listdir(directory) if f.endswith('.xlsx')]
+
+        if not files:
+            print("No CSV files found.")
+            return None, None
+
+        latest_file = max([os.path.join(directory, f) for f in files], key=os.path.getctime)
+        print(f"Loading data from: {latest_file}")
+        return pd.read_excel(latest_file), latest_file
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Error loading data: {e}")
+        return None, None
+
+def plot(df, user_input, save_folder, file_name):
+    """
+    Plots impedance vs frequency and saves the plot.
+    """
+    if 'c_frequency' not in df.columns or 'impedance' not in df.columns:
+        print("Required columns not found in dataset.")
         return
-    
+
     plt.figure(figsize=(10, 5))
-    plt.plot(df['c_frequency']*1000, df['impedance'], marker='o', linestyle='-', color='b', label='Impedance vs Frequency')
-  
+    plt.plot(df['c_frequency'] * 1000, df['impedance'], marker='o', linestyle='-', alpha=0.6, label='Original Impedance')
+    #plt.plot(df['c_frequency'] * 1000, df['impedance_filtered'], marker='o', linestyle='-', color='r', label='Filtered Impedance')
 
-    # Adding titles and labels
-    plt.title('Frequency vs Impedance'+' '+ 'of' +' ' + user_input)
-    plt.xlabel('Frequency' + ' (Hz)')
-    plt.ylabel('Impedance' + ' (ohms)')
-
+    plt.title(f'Frequency vs Impedance of {user_input}')
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Impedance (ohms)')
     plt.legend()
-
-    # Rotating the x-axis labels for better readability
     plt.xticks(rotation=45)
+    plt.tight_layout()
 
-    # Display the plot
-    plt.tight_layout()  # Adjust layout to prevent clipping of tick-labels
-    
-   
-    #Saves plots with filename, without the path
-    #Splitext removes the xlsx, [0] keeps first part of text
-    #https://docs.python.org/3/library/os.path.html
+    # Ensure the folder exists before saving
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder, exist_ok=True)
 
-    filefile = os.path.splitext(os.path.basename(recent_file))[0] 
-    save_plot = os.path.join(google_drive_path, f'{filefile}_{user_input}_plot.pdf')
-    plt.savefig(save_plot, format='pdf')  # Save the plot as PDF
-    print(f"Plot saved at: {save_plot}")
-    
-    plt.autoscale() #scale according to data
-    plt.show() #Need to move below plt.savefig or it clears before saving
-  
+    plot_filename = os.path.join(save_folder, f"{file_name}_{user_input}_plot.pdf")
+    plt.savefig(plot_filename, format='pdf')
+    print(f"Plot saved at: {plot_filename}")
+
+    plt.show()
+
+def main():
+    """
+    Main function to load the latest data and generate a plot.
+    """
+    GOOGLE_DRIVE_PATH = "/Users/jeanetteqi/Library/CloudStorage/GoogleDrive-jeanette.qi@sjsu.edu/Shared drives/MS project_Bryant and Sejad_Human Milk for Premature Infants/Prototype_MilkSensor_CSVData"
+    CSV_FOLDER = os.path.join(GOOGLE_DRIVE_PATH, "Prototype_MilkSensor_CSVData")
+    PLOT_FOLDER = os.path.join(GOOGLE_DRIVE_PATH, "Plots")
+
+    df, latest_file = load_latest_data(CSV_FOLDER)
+
+    if df is not None:
+        #Ask for user input and pass it to `plot()`
+        user_input = input("Enter the name or description to include in the plot title (e.g., 'Milk Sensor'): ")
+        plot(df, user_input, PLOT_FOLDER, os.path.splitext(os.path.basename(latest_file))[0])
+
 if __name__ == '__main__':
-    plot()
+    main()
