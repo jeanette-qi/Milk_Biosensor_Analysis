@@ -8,6 +8,8 @@ import time
 from datetime import datetime
 import serial
 import pandas as pd
+import numpy as np
+from scipy.signal import iirnotch, filtfilt
 from serial.tools import list_ports
 
 def serial_connection():
@@ -40,6 +42,17 @@ def create(csv_files):
     else:
         print(f'Folder already exists: {csv_files}')
 
+def notch_filter(impedance, fs=10000, notch_freq=2000, Q=30):
+    """
+    Applies a notch filter to remove 2kHz noise.
+    """
+    try:
+        b, a = iirnotch(notch_freq, Q, fs)
+        return filtfilt(b, a, impedance)
+    except Exception as e:
+        print(f"Error applying notch filter: {e}")
+        return impedance  # Return unfiltered data on failure
+
 def process(ser, csv_files):
     """
     This function parses, reads, filters, and formats the data from the serial port.
@@ -49,6 +62,26 @@ def process(ser, csv_files):
     try:
         # Wait for the serial connection to initialize
         time.sleep(2)
+
+        #Add the test impedance and wait for the Arduino prompt before sending 'y'
+        while True:
+            if ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8', errors='replace').strip()
+                print(f"Arduino: {line}")
+                
+                if "press 'y'" in line.lower():
+                    while True:
+                        user_input = input("Type 'y' and press Enter to continue: ").strip().lower()
+                        if user_input == 'y':
+                            ser.write(b'y\n')
+                            ser.flush()
+                            print("Sent 'y' to Arduino.")
+                            break
+                        else:
+                            print("Invalid input. Please type 'y'.")
+                    break  # break outer loop to proceed
+
+    
         print("Connected to Arduino")
 
         data_digest = []
@@ -92,15 +125,23 @@ def process(ser, csv_files):
             try:
                 df = pd.DataFrame(data_digest, columns=[
                     'timestamp', 'iteration_no', 'frequency_sweep_type',
-                    'c_frequency', 'real', 'imag', 'gain', 'magnitude', 'impedance'
+                    'c_frequency', 'real', 'imag', 'gain', 'magnitude', 'impedance', 'phase'
                 ])
+                # Convert impedance to float before filtering
+                df['impedance'] = df['impedance'].astype(float)
+                #df['impedance_filtered'] = notch_filter(df['impedance'].to_numpy())
+
                 df.to_excel(file_path, index=False, header=True)
                 print(f'Data saved to Google Drive: {file_path} successfully')
+                return file_path
+            
             except Exception as e:
                 print(f"Error saving file: {e}")
 
         else:
             print("No data to save.")
+            return None
+
 
 def main():
     """
@@ -113,17 +154,16 @@ def main():
         'Shared drives/MS project_Bryant and Sejad_Human Milk'
         ' for Premature Infants/Prototype_MilkSensor_CSVData'
     )
-    #Checks if the folder exist
-    create(csv_files)
+    csv_folder = os.path.join(csv_files, "Prototype_MilkSensor_CSVData")
 
-    #Initialize serial connection
+    create(csv_folder)
     ser = serial_connection()
-
-    if not ser:
+        
+    if ser:
+        process(ser, csv_folder)
+    else:
         print("Failed to establish a serial connection.")
-        return
-    #Process and save data
-    process(ser, csv_files)
+
 
 if __name__ == "__main__":
     main()
