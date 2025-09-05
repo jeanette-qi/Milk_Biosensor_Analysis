@@ -594,4 +594,79 @@
      return true;
  }
  */
+<<<<<<< HEAD
  
+=======
+bool AD5933::calibrate(double gain[], int phase[], int ref, int n) {
+    int *real = new int[n];
+    int *imag = new int[n];
+
+    if (!frequencySweep(real, imag, n)) {
+        delete[] real;
+        delete[] imag;
+        return false;
+    }
+
+    for (int i = 0; i < n; i++) {
+        double magnitude = sqrt(pow(real[i], 2) + pow(imag[i], 2));
+
+        //Change to original code: Add error check for handling magnitude
+        if (magnitude > 0.0 && ref > 0) {
+            double refValue = static_cast<double>(ref);
+            double denominator = refValue * magnitude;
+
+            gain[i] = 1.0 / denominator;
+
+        } else {
+            gain[i] = 0.0;
+            Serial.println("Error: Invalid magnitude or reference resistance.");
+        }
+
+        // Add option to calculate phase
+        if (real[i] == 0 && imag[i] == 0) {
+            phase[i] = 0; // Handle undefined phase
+        } else {
+            phase[i] = (int)(atan2((double)imag[i], (double)real[i]) * (180.0 / PI));
+        }
+
+        /*// Debugging: Calculate and log phase
+        phase[i] = atan2(imag[i], real[i]) * (180.0 / PI);
+        Serial.print("Phase (degrees) = ");
+        Serial.println(phase[i], 6);*/
+    }
+
+    delete[] real;
+    delete[] imag;
+    return true;
+}
+
+
+/**
+ * Computes the gain factor and phase for each point in a frequency sweep.
+ * Also provides the caller with the real and imaginary data.
+ *
+ * @param gain An array of appropriate size to hold the gain factors
+ * @param phase An array of appropriate size to hold the phase data
+ * @param real An array of appropriate size to hold the real data
+ * @param imag An array of appropriate size to hold the imaginary data.
+ * @param ref The known reference resistance.
+ * @param n Length of the array (or the number of discrete measurements)
+ * @return Success or failure
+ */
+bool AD5933::calibrate(double gain[], int phase[], int real[], int imag[],
+                       int ref, int n) {
+    // Perform the frequency sweep
+    if (!frequencySweep(real, imag, n)) {
+        return false;
+    }
+
+    // For each point in the sweep, calculate the gain factor and phase
+    for (int i = 0; i < n; i++) {
+        gain[i] = (double)(1.0/ref)/sqrt(pow(real[i], 2) + pow(imag[i], 2));
+        phase[i] = (int)(atan2((double)imag[i], (double)real[i]) * (180.0 / PI));
+        // TODO: phase
+    }
+
+    return true;
+}
+>>>>>>> origin/main
